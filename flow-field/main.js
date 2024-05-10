@@ -4,8 +4,6 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-console.log(ctx);
-
 //Canvas Setting
 ctx.fillStyle = 'white';
 ctx.strokeStyle = 'white';
@@ -29,6 +27,16 @@ class Particle {
         this.maxLength = Math.floor(Math.random() * 200 + 10);
         this.angle = 0;
         this.timer = this.maxLength * 2;
+        this.colors = [
+            '#6e0333',
+            '#870b43',
+            '#ad0e56',
+            '#ad346b',
+            '#d9508e',
+            '#e887b3',
+        ];
+        this.color =
+            this.colors[Math.floor(Math.random() * this.colors.length)];
     }
 
     draw(context) {
@@ -38,6 +46,7 @@ class Particle {
         for (let i = 0; i < this.history.length; i++) {
             context.lineTo(this.history[i].x, this.history[i].y);
         }
+        context.strokeStyle = this.color;
         context.stroke();
     }
 
@@ -48,7 +57,7 @@ class Particle {
             let y = Math.floor(this.y / this.effect.cellSize);
 
             const index = y * this.effect.cols + x;
-            console.log(index);
+
             this.angle = this.effect.flowFields[index];
 
             this.speedX = Math.cos(this.angle);
@@ -80,18 +89,30 @@ class Particle {
 }
 
 class Effect {
-    constructor(width, height) {
-        this.width = width;
-        this.height = height;
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
         this.particles = [];
-        this.numberOfParticles = 300;
+        this.numberOfParticles = 200;
         this.cellSize = 20;
         this.rows;
         this.cols;
         this.flowFields = [];
-        this.curve = 0.5;
+        this.curve = 2;
         this.zoom = 0.13;
+        this.debug = false;
         this.init();
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'd') {
+                this.debug = !this.debug;
+            }
+        });
+
+        window.addEventListener('resize', (e) => {
+            this.resize(e.target.innerWidth, e.target.innerHeight);
+        });
     }
     init() {
         //create flow fields
@@ -106,25 +127,55 @@ class Effect {
                     this.curve;
                 this.flowFields.push(angle);
             }
-            console.log(this.flowFields);
         }
 
         //create particles
+        this.particles = [];
         for (let i = 0; i < this.numberOfParticles; i++) {
             this.particles.push(new Particle(this));
         }
     }
+
+    drawGrid(context) {
+        context.save();
+        context.strokeStyle = 'red';
+        context.lineWidth = 0.3;
+        for (let c = 0; c < this.cols; c++) {
+            context.beginPath();
+            context.moveTo(this.cellSize * c, 0);
+            context.lineTo(this.cellSize * c, this.height);
+            context.stroke();
+        }
+
+        for (let r = 0; r < this.rows; r++) {
+            context.beginPath();
+            context.moveTo(0, this.cellSize * r);
+            context.lineTo(this.width, this.cellSize * r);
+            context.stroke();
+        }
+        context.restore();
+    }
+
     render(context) {
+        if (this.debug) {
+            this.drawGrid(context);
+        }
         this.particles.forEach((particle) => {
             particle.draw(context);
             particle.update();
         });
     }
+
+    resize(width, height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        this.init();
+    }
 }
 
-const effect = new Effect(canvas.width, canvas.height);
-
-console.log(effect);
+const effect = new Effect(canvas);
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
